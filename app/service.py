@@ -7,7 +7,7 @@ from google import genai
 from app.settings import settings
 from app.schema import Song, Response, VerseType
 
-BATCH_SIZE = 1
+BATCH_SIZE = 5
 
 LYRICS_PROMPT = ("Convert each line of this json list of raw song files excluding the title line(denoted by 'Title:') and any empty lines into spanish. "
               "Verses are denoted by 'Verse' and chorus is denoted by 'Chorus' if no verses are explicitly labelled, group verses based by multiple consecutive line breaks. Ensure the title line is not converted to spanish. If no title is explicitly defined, try to identify and use the title of the song found online. if unsuccessful, copy the first line as the title. Verse labels could be just a name like 'Verse' or a numbered name like 'Verse 1' same for all the other verse labels. Use these labels to build the output but remove them from the text")
@@ -49,7 +49,6 @@ def retrieve_missed_files():
         if not os.path.isdir(os.path.join(processed_folder_path, f)) and not os.path.getsize(f"{processed_folder_path}/{f}"):
             print("}}}}", f)
             mat = re.search(r"(\d*)-(\d+)", f)
-            # import pdb; pdb.set_trace()
             print("]]]]]", mat)
             start_index = int(mat.group(1))
             end_index = int(mat.group(2))
@@ -61,38 +60,38 @@ def retrieve_missed_files():
     return files
 
 
-def process_files(start_index: int = 0):
-    files = retrieve_unprocessed_files()
+def process_files(start_index: int = 0, raw_files=None, processed_folder_path: str = f"{settings.project_dir}/data/processed/general"):
+    raw_files = raw_files or retrieve_unprocessed_files()
     processed_files = Response(songs=[])
-    print("+++++", len(files))
+    print("+++++", len(raw_files))
 
 
-    files_length = len(files)
+    files_length = len(raw_files)
     end_index = start_index + BATCH_SIZE
-    if end_index > files_length - 1:
-        end_index = files_length - 1
+    if end_index > files_length:
+        end_index = files_length
     should_loop = True
     while should_loop:
         print("+++++++", f"start={start_index}, end={end_index}, total_length={files_length}")
         if end_index >= files_length:
-            end_index = files_length - 1
+            end_index = files_length
             should_loop = False
-        response = get_gemini_reponse(prompt=LYRICS_PROMPT, values=files[start_index:end_index])
+        response = get_gemini_reponse(prompt=LYRICS_PROMPT, values=raw_files[start_index:end_index])
 
         processed_files.songs.extend(response.parsed) if response.parsed else []
         print("======", response.parsed)
         with (
-            open(f"{settings.project_dir}/data/processed/parsed_batch{start_index}-{end_index}.json", "w") as parsed_file,
-            open(f"{settings.project_dir}/data/processed/text_batch{start_index}-{end_index}.json", "w") as text_file,
+            open(f"{processed_folder_path}/parsed_batch{start_index}-{end_index}.json", "w") as parsed_file,
+            open(f"{processed_folder_path}/text_batch{start_index}-{end_index}.json", "w") as text_file,
         ):
             text_file.write(response.text)
             if response.parsed:
                 parsed_file.write(Response.model_validate({"songs": response.parsed}).model_dump_json())
 
-        start_index = end_index
+        start_index = end_index - 1
         end_index += BATCH_SIZE
 
-    with open(f"{settings.project_dir}/data/all_processed_files.json", "w") as all_processed_files:
+    with open(f"{processed_folder_path}/all_processed_files.json", "w") as all_processed_files:
         all_processed_files.write(Response.model_dump_json(processed_files))
     return processed_files
 
@@ -208,12 +207,16 @@ def get_gemini_reponse(prompt: str, values: list[str]):
     )
 
 
-def generate_with_spanish_translations(texts: list[str]) -> Response:
+async def generate_with_spanish_translations(texts: list[str]) -> Response:
     response = get_gemini_reponse(prompt=LYRICS_PROMPT, values=texts)
     return Response.model_validate({"songs": response.parsed})
 
+def create_import_file(structured_raw_file: Response, importable_file_path: str):
+    with open(f"{importable_file_path}", "w") as import_file:
+        import_file.write(create_import_file_string(structured_raw_file))
 
-def create_import_file(structured_raw_file: Response):
+
+def create_import_file_string(structured_raw_file: Response):
     import_ready_file = ""
     for song in structured_raw_file.songs:
         import_ready_file += f"Title: {song.title}-(WITH-SPANISH)\n\n"
