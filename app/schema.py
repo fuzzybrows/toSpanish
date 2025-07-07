@@ -28,7 +28,7 @@ class Song(BaseModel):
     verses: list[Verse]
 
 
-class Response(BaseModel):
+class SongsParentModel(BaseModel):
     songs: list[Song]
 
 
@@ -38,4 +38,4 @@ class IncludeSpanishRequest(BaseModel):
 
 class IncludeSpanishResponse(BaseModel):
     text_data: str
-    json_data: Response
+    json_data: SongsParentModel
