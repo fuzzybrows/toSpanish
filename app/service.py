@@ -2,7 +2,8 @@ import json
 import os
 import logging
 
-from google import genai
+from google.genai import Client as GenAIClient
+from google.genai.errors import ServerError
 
 from app.settings import settings
 from app.schema import Song, SongsParentModel, VerseType
@@ -14,7 +15,7 @@ BATCH_SIZE = 15
 LYRICS_PROMPT = ("Convert each line of this json list of raw song files excluding the title line(denoted by 'Title:') and any empty lines into spanish. "
               "Verses are denoted by 'Verse' and chorus is denoted by 'Chorus' if no verses are explicitly labelled, group verses based by multiple consecutive line breaks. Ensure the title line is not converted to spanish. If no title is explicitly defined, try to identify and use the title of the song found online. if unsuccessful, copy the first line as the title. Verse labels could be just a name like 'Verse' or a numbered name like 'Verse 1' same for all the other verse labels. Use these labels to build the output but remove them from the text")
 
-GENAI_CLIENT =  genai.Client(api_key=settings.genai_client_api_key)
+GENAI_CLIENT =  GenAIClient(api_key=settings.genai_client_api_key)
 
 
 def retrieve_unprocessed_files():
@@ -72,23 +73,19 @@ def process_files(start_index: int = 0,
 
     files_length = len(raw_files)
     end_index = start_index + batch_size
-    if end_index > files_length:
-        end_index = files_length
     should_loop = True
     while should_loop:
-        logger.info(
-            f"Processing... start_index={start_index}, end_index={end_index}, total_length_of_files={files_length}")
         if end_index >= files_length:
             end_index = files_length
             should_loop = False
+        logger.info(
+            f"Processing... start_index={start_index}, end_index={end_index}, total_length_of_files={files_length}")
         response = get_gemini_reponse(prompt=LYRICS_PROMPT, values=raw_files[start_index:end_index])
 
         if not response.parsed:
             logger.info(f"Failed to obtain parsed data for batch. start_index={start_index}, end_index={end_index}, batch_size={batch_size}")
             processed_files2 = process_files(batch_size=batch_size // 2, raw_files=raw_files[start_index:end_index], processed_folder_path=processed_folder_path)
             processed_files.songs.extend(processed_files2.songs)
-            # processed_files.songs.extend(response.parsed) if response.parsed else []
-            # skipped_files.extend(raw_files[start_index:end_index])
         else:
             processed_files.songs.extend(response.parsed)
 
@@ -202,14 +199,24 @@ def find_unprocessed_songs():
     return files
 
 
-def get_gemini_reponse(prompt: str, values: list[str]):
-    return GENAI_CLIENT.models.generate_content(
-        model="gemini-2.0-flash", contents=f"{prompt}. VALUES={values}",
-        config={
-            "response_mime_type": "application/json",
-            "response_schema": list[Song],
-        }
-    )
+def get_gemini_reponse(prompt: str, values: list[str], retry_count: int = 0):
+    try:
+        return GENAI_CLIENT.models.generate_content(
+            model="gemini-2.0-flash", contents=f"{prompt}. VALUES={values}",
+            config={
+                "response_mime_type": "application/json",
+                "response_schema": list[Song],
+            }
+        )
+    except ServerError as e:
+        if "The model is overloaded. Please try again later." in e:
+            if retry_count > 5:
+                raise e
+            retry_attempt = retry_count + 1
+            logger.info("Retrying... Attempt No: " + str(retry_attempt))
+            return get_gemini_reponse(prompt, values, retry_attempt)
+        raise e
+
 
 
 def generate_with_spanish_translations(texts: list[str]) -> SongsParentModel:
