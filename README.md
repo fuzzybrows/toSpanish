@@ -52,13 +52,23 @@ The application provides both API endpoints for integration with other systems a
 
 ### Running the Application
 
-Start the FastAPI server:
+Start the FastAPI server using one of the following methods:
+
+#### Option 1: Using make command
+
+```bash
+make run
+```
+
+This will activate the virtual environment and start the server on port 8000.
+
+#### Option 2: Using uvicorn directly
 
 ```bash
 uvicorn app.server:app --reload --port 9000
 ```
 
-The API will be available at http://localhost:9000
+The API will be available at http://localhost:8000 (with make run) or http://localhost:9000 (with direct uvicorn command)
 
 ### API Endpoints
 

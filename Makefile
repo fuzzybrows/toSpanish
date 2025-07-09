@@ -18,3 +18,6 @@ pip_sync: requirements.txt
 .venv:
 	command -v deactivate && deactivate || true
 	python -m venv $(VENV)
+
+run:
+	source $(VENV)/bin/activate && uvicorn app.server:app --port 8000
