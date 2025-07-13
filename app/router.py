@@ -40,12 +40,12 @@ def create_upload_files(files: list[UploadFile], background_tasks: BackgroundTas
     return {"file_id": folder_name}
 
 def process_files_background(raw_files: dict[str, bytes | str], processed_folder_path: str):
-    with open(f"{settings.project_dir}/data/songs_database.json", "r") as songs_database:
-        try:
+    try:
+        with open(f"{settings.project_dir}/data/songs_database.json", "r") as songs_database:
             db = SongsParentModel.model_validate_json(songs_database.read())
-        except (ValidationError, Exception) as e:
-            logger.exception(f"Validation error: {e}")
-            db = SongsParentModel(songs=[])
+    except (ValidationError, Exception) as e:
+        logger.exception(f"Error reading songs db: {e}")
+        db = SongsParentModel(songs=[])
     try:
         processed_files = process_files(raw_files=raw_files,
                                         processed_folder_path=processed_folder_path,
