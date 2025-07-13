@@ -3,6 +3,7 @@ import logging
 
 from google.genai import Client as GenAIClient
 from google.genai.errors import ServerError
+from fastapi import UploadFile
 
 from app.settings import settings
 from app.schema import Song, SongsParentModel, VerseType
@@ -17,7 +18,7 @@ LYRICS_PROMPT = ("Convert each line of this json list of raw song files excludin
 GENAI_CLIENT =  GenAIClient(api_key=settings.genai_client_api_key)
 
 
-def retrieve_unprocessed_files():
+def retrieve_unprocessed_files() -> list[UploadFile]:
     folder_path = f"{settings.project_dir}/data/unprocessed"
     file_names = [f for f in os.listdir(folder_path) if not os.path.isdir(os.path.join(folder_path, f))]
     files = []
@@ -28,15 +29,25 @@ def retrieve_unprocessed_files():
     return files
 
 
-def process_files(start_index: int = 0,
+def process_files(raw_files: dict[str, str | bytes] | None = None,
+                  filtered_raw_files: list[str | bytes] | None = None,
+                  start_index: int = 0,
                   batch_size: int = BATCH_SIZE,
-                  raw_files=None,
                   processed_folder_path: str = f"{settings.project_dir}/data/processed/general",
-                  write_to_file: bool = False):
-    raw_files = raw_files or retrieve_unprocessed_files()
+                  write_to_file: bool = False,
+                  songs_db: SongsParentModel | None = None):
+    raw_files = raw_files if raw_files is not None else {}
     processed_files = SongsParentModel(songs=[])
+    filtered_raw_files = [] if filtered_raw_files is None else filtered_raw_files
+    for filename, file in raw_files.items():
+        processed_song = songs_db.get_song_by_title(filename.split(".")[0]) if songs_db is not None else None
+        if processed_song is not None:
+            processed_files.songs.append(processed_song)
+        else:
+            filtered_raw_files.append(file)
 
-    files_length = len(raw_files)
+    files_length = len(filtered_raw_files)
+    logger.info(f"Total length of filtered_files: {files_length}. Original length of files: {len(raw_files)}")
     end_index = start_index + batch_size
     should_loop = True
     while should_loop:
@@ -45,14 +56,16 @@ def process_files(start_index: int = 0,
             should_loop = False
         logger.info(
             f"Processing... start_index={start_index}, end_index={end_index}, total_length_of_files={files_length}")
-        response = get_gemini_reponse(prompt=LYRICS_PROMPT, values=raw_files[start_index:end_index])
+        response = get_gemini_response(prompt=LYRICS_PROMPT, values=filtered_raw_files[start_index:end_index])
 
         if not response.parsed:
             logger.info(f"Failed to obtain parsed data for batch. start_index={start_index}, end_index={end_index}, batch_size={batch_size}")
-            processed_files2 = process_files(batch_size=batch_size // 2, raw_files=raw_files[start_index:end_index], processed_folder_path=processed_folder_path)
+            processed_files2 = process_files(batch_size=batch_size // 2, filtered_raw_files=filtered_raw_files[start_index:end_index], processed_folder_path=processed_folder_path, songs_db=songs_db)
             processed_files.songs.extend(processed_files2.songs)
+            songs_db.songs.extend(processed_files2.songs)
         else:
             processed_files.songs.extend(response.parsed)
+            songs_db.songs.extend(response.parsed)
 
         start_index = end_index - 1
         end_index += batch_size
@@ -63,7 +76,7 @@ def process_files(start_index: int = 0,
     return processed_files
 
 
-def get_gemini_reponse(prompt: str, values: list[str], retry_count: int = 0):
+def get_gemini_response(prompt: str, values: list[str], retry_count: int = 0):
     try:
         return GENAI_CLIENT.models.generate_content(
             model="gemini-2.0-flash", contents=f"{prompt}. VALUES={values}",
@@ -78,13 +91,13 @@ def get_gemini_reponse(prompt: str, values: list[str], retry_count: int = 0):
                 raise e
             retry_attempt = retry_count + 1
             logger.info("Retrying... Attempt No: " + str(retry_attempt))
-            return get_gemini_reponse(prompt, values, retry_attempt)
+            return get_gemini_response(prompt, values, retry_attempt)
         raise e
 
 
 
 def generate_with_spanish_translations(texts: list[str]) -> SongsParentModel:
-    response = get_gemini_reponse(prompt=LYRICS_PROMPT, values=texts)
+    response = get_gemini_response(prompt=LYRICS_PROMPT, values=texts)
     return SongsParentModel.model_validate({"songs": response.parsed})
 
 def create_import_file(structured_raw_file: SongsParentModel, importable_file_path: str):

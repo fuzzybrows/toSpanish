@@ -1,7 +1,8 @@
 import enum
 from enum import auto
+from functools import cached_property
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 
 class VerseType(str, enum.Enum):
@@ -30,6 +31,14 @@ class Song(BaseModel):
 
 class SongsParentModel(BaseModel):
     songs: list[Song]
+
+    @computed_field
+    @property
+    def songs_by_title(self) -> dict[str, Song]:
+        return {song.title: song for song in self.songs}
+
+    def get_song_by_title(self, title: str) -> Song | None:
+        return self.songs_by_title.get(title)
 
 
 class IncludeSpanishRequest(BaseModel):
