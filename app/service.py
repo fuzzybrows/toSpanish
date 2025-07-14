@@ -51,6 +51,8 @@ def process_files(raw_files: dict[str, str | bytes] | None = None,
     end_index = start_index + batch_size
     should_loop = True
     while should_loop:
+        if start_index < 0:
+            break
         if end_index >= files_length:
             end_index = files_length
             should_loop = False
