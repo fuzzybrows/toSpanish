@@ -12,6 +12,14 @@ on:
 permissions:
   contents: read
 
+env:
+  DAY_OF_WEEK: Monday
+  GENAI_CLIENT_API_KEY: TEST
+  PORT: 8055
+  ENVIRONMENT: CI
+  ALLOWED_ORIGINS: test
+  DATABASE_URL: postgresql+psycopg2://test:test@localhost:5432/test
+
 jobs:
   build:
 
