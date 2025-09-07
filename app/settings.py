@@ -7,6 +7,7 @@ PROJECT_DIR = f"{ROOT_DIR}/app"
 
 class Settings(BaseSettings):
     environment: str
+    database_url: str
     root_dir: str = ROOT_DIR
     project_dir: str = PROJECT_DIR
     genai_client_api_key: str

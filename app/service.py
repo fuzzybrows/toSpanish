@@ -5,15 +5,24 @@ from google.genai import Client as GenAIClient
 from google.genai.errors import ServerError
 from fastapi import UploadFile
 
+from app.models.base.songs import VerseType
 from app.settings import settings
-from app.schema import Song, SongsParentModel, VerseType
+from app.models.public.schema import SongsParentModel
+from app.models.public.songs import SongPublic
 
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 15
 
-LYRICS_PROMPT = ("Convert each line of this json list of raw song files excluding the title line(denoted by 'Title:') and any empty lines into spanish. "
-              "Verses are denoted by 'Verse' and chorus is denoted by 'Chorus' if no verses are explicitly labelled, group verses based by multiple consecutive line breaks. Ensure the title line is not converted to spanish. If no title is explicitly defined, try to identify and use the title of the song found online. if unsuccessful, copy the first line as the title. Verse labels could be just a name like 'Verse' or a numbered name like 'Verse 1' same for all the other verse labels. Use these labels to build the output but remove them from the text")
+LYRICS_PROMPT = (
+    "Convert each line of this json list of raw song files excluding the title line(denoted by 'Title:') "
+    "and any empty lines into spanish. Verses are denoted by 'Verse' and chorus is denoted by 'Chorus' "
+    "if no verses are explicitly labelled, group verses based by multiple consecutive line breaks. "
+    "Ensure the title line is not converted to spanish. If no title is explicitly defined, "
+    "try to identify and use the title of the song found online. if unsuccessful, copy the first line as the title. "
+    "Verse labels could be just a name like 'Verse' or a numbered name like 'Verse 1' "
+    "same for all the other verse labels. Use these labels to build the output but remove them from the text"
+)
 
 GENAI_CLIENT =  GenAIClient(api_key=settings.genai_client_api_key)
 
@@ -84,7 +93,7 @@ def get_gemini_response(prompt: str, values: list[str], retry_count: int = 0):
             model="gemini-2.0-flash", contents=f"{prompt}. VALUES={values}",
             config={
                 "response_mime_type": "application/json",
-                "response_schema": list[Song],
+                "response_schema": list[SongPublic],
             }
         )
     except ServerError as e:
