@@ -1,0 +1,35 @@
+# Exported from Render on 2025-09-07T00:48:14Z
+services:
+- type: web
+  name: toSpanish
+  runtime: python
+  repo: https://github.com/fuzzybrows/toSpanish
+  plan: starter
+  envVars:
+  - key: ALLOWED_ORIGINS
+    sync: false
+  - key: ENVIRONMENT
+    sync: false
+  - key: GENAI_CLIENT_API_KEY
+    sync: false
+  region: oregon
+  buildCommand: pip install -r requirements.txt
+  startCommand: uvicorn app.server:app --host 0.0.0.0 --port $PORT --workers 4
+  autoDeployTrigger: commit
+- type: web
+  name: toSpanish-dev
+  runtime: python
+  repo: https://github.com/fuzzybrows/toSpanish
+  plan: free
+  envVars:
+  - key: ALLOWED_ORIGINS
+    sync: false
+  - key: ENVIRONMENT
+    sync: false
+  - key: GENAI_CLIENT_API_KEY
+    sync: false
+  region: oregon
+  buildCommand: pip install -r requirements.txt
+  startCommand: uvicorn app.server:app --host 0.0.0.0 --port $PORT --workers 4
+  autoDeployTrigger: commit
+version: "1"
