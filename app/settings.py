@@ -7,6 +7,7 @@ PROJECT_DIR = f"{ROOT_DIR}/app"
 
 class Settings(BaseSettings):
     environment: str
+    database_url: str
     root_dir: str = ROOT_DIR
     project_dir: str = PROJECT_DIR
     genai_client_api_key: str
@@ -17,7 +18,7 @@ class Settings(BaseSettings):
 
     @property
     def get_allowed_origins(self):
-        if self.allowed_origins is not None:
+        if self.allowed_origins:
             return self.allowed_origins.split("|")
         if self.environment == "local":
             return ["*"]
