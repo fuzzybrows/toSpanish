@@ -81,7 +81,7 @@ def process_files(raw_files: dict[str, str | bytes] | None = None,
 def get_gemini_response(prompt: str, values: list[str], retry_count: int = 0):
     try:
         return GENAI_CLIENT.models.generate_content(
-            model="gemini-2.0-flash", contents=f"{prompt}. VALUES={values}",
+            model=settings.model_name.value, contents=f"{prompt}. VALUES={values}",
             config={
                 "response_mime_type": "application/json",
                 "response_schema": list[Song],
