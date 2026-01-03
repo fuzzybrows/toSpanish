@@ -10,6 +10,7 @@ PROJECT_DIR = f"{ROOT_DIR}/app"
 
 class Settings(BaseSettings):
     environment: str
+    database_url: str
     root_dir: str = ROOT_DIR
     project_dir: str = PROJECT_DIR
     genai_client_api_key: str
@@ -21,7 +22,7 @@ class Settings(BaseSettings):
 
     @property
     def get_allowed_origins(self):
-        if self.allowed_origins is not None:
+        if self.allowed_origins:
             return self.allowed_origins.split("|")
         if self.environment == "local":
             return ["*"]
@@ -29,7 +30,9 @@ class Settings(BaseSettings):
 
     @field_validator("model_name", mode="before")
     @classmethod
-    def strict_names_only(cls, v):
+    def strict_model_names_only(cls, v):
+        if isinstance(v, GeminiModels):
+            return v
         try:
             return GeminiModels[v]
         except KeyError:

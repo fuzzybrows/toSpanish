@@ -4,7 +4,7 @@ import uuid
 
 from pydantic_core._pydantic_core import ValidationError
 
-from app.schema import IncludeSpanishRequest, IncludeSpanishResponse, SongsParentModel
+from app.models.public.schema import IncludeSpanishRequest, IncludeSpanishResponse, SongsParentModel
 from app.service import generate_with_spanish_translations, create_import_file_string, process_files, create_import_file
 
 from fastapi import APIRouter, UploadFile, BackgroundTasks
@@ -24,7 +24,6 @@ async def root():
 def include_spanish(request: IncludeSpanishRequest) -> IncludeSpanishResponse:
     structured_response = generate_with_spanish_translations(texts=[request.text])
     importable_file = create_import_file_string(structured_raw_file=structured_response)
-    print(importable_file)
     return IncludeSpanishResponse(text_data=importable_file, json_data=structured_response)
 
 
@@ -61,10 +60,6 @@ def process_files_background(raw_files: dict[str, bytes | str], processed_folder
             songs_database.write(db.model_dump_json(exclude={"songs_by_title": True}))
         import_file_path = f"{processed_folder_path}/importable_file.txt"
         create_import_file(structured_raw_file=processed_files, importable_file_path=import_file_path)
-
-
-
-
 
 
 @router.get('/propresenter/download_importable_file/{file_id}')

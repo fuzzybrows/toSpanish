@@ -1,6 +1,14 @@
+alembic[tz]
 pydantic
 pydantic-settings
 pip-tools
 fastapi[standard]
 google-genai
 uvicorn
+sqlmodel
+psycopg2-binary>=2.9.10
+
+# Testing dependencies
+pytest
+pytest-cov
+httpx

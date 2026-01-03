@@ -165,6 +165,52 @@ The application is configured using environment variables or a `.env` file. The 
 - `port`: The port to run the server on (default: 9000)
 - `allowed_origins`: CORS allowed origins (pipe-separated list)
 
+## Testing
+
+The project includes a comprehensive test suite using pytest. Tests are organized in the `tests` directory.
+
+### Running Tests
+
+You can run tests using one of the following methods:
+
+#### Using the test script:
+
+```bash
+# Run all tests with coverage report
+./scripts/run_tests.sh
+```
+
+#### Using make commands:
+
+```bash
+# Run all tests
+make test
+
+# Run tests with verbose output
+make test-verbose
+
+# Run tests with coverage report
+make test-coverage
+
+# Run tests with detailed coverage report
+make test-with-coverage
+```
+
+#### Using pytest directly:
+
+```bash
+# Run all tests
+pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Generate a coverage report
+pytest --cov=app
+```
+
+For more information about the tests, see the [tests/README.md](tests/README.md) file.
+
 ## License
 
 [MIT License](LICENSE)
