@@ -12,3 +12,4 @@ class GeminiModels(str, enum.Enum):
     THREE_POINT_ONE_FLASH_LITE = "gemini-3.1-flash-lite"
     THREE_POINT_ONE_PRO_PREVIEW = "gemini-3.1-pro-preview"
     THREE_POINT_FIVE_FLASH = "gemini-3.5-flash"
+    THREE_PRO_PREVIEW = "gemini-3-pro-preview"
